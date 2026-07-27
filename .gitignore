@@ -1,4 +1,16 @@
-
+# Log / cache do mpv sinh ra khi chạy
 *.log
 *.cache
 cache/
+
+# Trạng thái phát do mpv sinh ra (watch later, lịch sử)
+watch_later/
+watch-later/
+mpv-history.log
+history.log
+
+# File tạm của hệ điều hành / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
