@@ -1,6 +1,50 @@
 # mpv configuration
-**This mpv configuration is done on mpv-git. Make sure you are using the latest version of mpv-git if you want to use this configuration.**
+
+Bộ cấu hình mpv cá nhân: giao diện [uosc](https://github.com/tomasklaen/uosc), thumbnail khi tua ([thumbfast](https://github.com/po5/thumbfast)), menu chuột phải đầy đủ, shaders nâng cấp chất lượng hình ảnh và nhiều script tiện ích.
+
+> **Yêu cầu:** mpv **0.40+** (khuyến nghị bản mpv-git mới nhất). Cấu hình dùng các tính năng mới như `script-binding commands/open`, script built-in `positioning`, thuộc tính `clipboard/text` và `autocreate-playlist` — các bản mpv cũ sẽ không hoạt động đầy đủ.
+
 ![thumb](https://github.com/tuilakhanh/mpv-conf/assets/17153084/908b4514-d85f-4c99-b9c1-28245795ea94)
+
+## Cài đặt
+
+Clone repo này vào thư mục cấu hình của mpv:
+
+| Hệ điều hành | Đường dẫn |
+| --- | --- |
+| Windows | `%APPDATA%\mpv` (hoặc `portable_config` cạnh `mpv.exe`) |
+| Linux / macOS | `~/.config/mpv` |
+
+```sh
+git clone https://github.com/KenShinNguyen/mpv-config <thư-mục-cấu-hình-mpv>
+```
+
+Xem/tải phụ đề YouTube và phát URL cần có [yt-dlp](https://github.com/yt-dlp/yt-dlp) trong `PATH`.
+
+## Điểm nổi bật
+
+- **gpu-api tự động theo hệ điều hành**: Windows → `d3d11`, Linux → `vulkan`, macOS → mặc định (xem `profiles.conf`).
+- **3 profile chất lượng**: `HighQuality` (RAVU + CfL Prediction), `Balanced` (mặc định), `Fast` — chuyển đổi qua menu chuột phải.
+- **Menu chuột phải** (uosc) chứa gần như toàn bộ chức năng: mở file/URL, playlist, track, shaders, screenshot, cắt video…
+- **Ưu tiên ngôn ngữ**: audio Nhật → Việt → Anh, phụ đề Việt.
+- Screenshot lưu tại `~/Pictures/mpv` (đổi trong `mpv.conf` nếu muốn).
+
+## Phím tắt đáng chú ý
+
+| Phím | Chức năng |
+| --- | --- |
+| `Chuột phải` / `Shift+m` | Mở menu |
+| `Tab` | Ẩn/hiện giao diện |
+| `Ctrl+v` | Phát file/URL từ clipboard |
+| `h` | Lịch sử phát (memo) |
+| `-` / `y` | Chọn chất lượng video / audio (stream) |
+| `Shift+w` | Cắt video thành WebM |
+| `Ctrl+Shift+s` | Cắt video lossless |
+| `s` / `e` | Screenshot ra file / clipboard |
+| `?` | Xem toàn bộ phím tắt |
+| `` ` `` | Mở console |
+
+Toàn bộ phím tắt nằm trong [`input.conf`](input.conf).
 
 ## Scripts and Shaders Credits
 
