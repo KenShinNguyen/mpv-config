@@ -14,3 +14,8 @@ history.log
 Thumbs.db
 *.swp
 *~
+
+# Cài đặt cục bộ của http-ytproxy: binary đã build và CA sinh riêng trên từng
+# máy, không thuộc về repo cấu hình. Giữ dòng này để `git clean -xdf` trong
+# ~/.config/mpv không xoá mất bản cài.
+scripts/http-ytproxy/
