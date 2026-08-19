@@ -78,6 +78,31 @@ kiểm tra hành vi mà không cần mở mpv.
 Cả ba chạy tự động trên mỗi push qua GitHub Actions
 ([`.github/workflows/check-config.yml`](.github/workflows/check-config.yml)).
 
+## Xử lý sự cố
+
+### Phát stream (YouTube/URL) không có tiếng
+
+YouTube đang dần triển khai giao thức streaming mới (SABR) khiến các format
+audio-only dạng DASH mà yt-dlp trước giờ vẫn dùng bị chặn hoặc thiếu URL. Khi
+đó `ytdl-format=bestvideo+bestaudio/best` có thể fallback nhầm sang một format
+chỉ có video, không có audio — phát vẫn chạy bình thường nhưng im lặng.
+
+Cách khắc phục:
+
+1. **Cập nhật yt-dlp lên bản mới nhất** — đây là nguyên nhân phổ biến nhất,
+   vì các bản cũ chưa có cơ chế fallback qua client khác (`tv`, `ios`...) khi
+   client mặc định bị chặn SABR:
+   ```sh
+   yt-dlp -U
+   # hoặc: pip install -U yt-dlp
+   ```
+2. `mpv.conf` đã đặt `ytdl-format=bestvideo+bestaudio/best[acodec!=none]/best`
+   để đảm bảo nếu phải fallback, mpv luôn chọn format có audio thay vì chọn
+   nhầm video-only.
+3. Nếu vẫn mất tiếng ở một video cụ thể, mở console (`` ` ``) rồi xem log —
+   dòng `Some ... formats have been skipped as they are missing a url` hoặc
+   `YouTube is forcing SABR streaming` xác nhận đúng nguyên nhân trên.
+
 ## Bảo mật: scheme `mpv://`
 
 [`scripts/protocol_hook.lua`](scripts/protocol_hook.lua) đăng ký `mpv://` làm
