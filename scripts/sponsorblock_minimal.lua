@@ -2,6 +2,12 @@
 --
 -- This script skips sponsored segments of YouTube videos
 -- using data from https://github.com/ajayyy/SponsorBlock
+--
+-- LOCAL MODIFICATIONS (upstream: https://codeberg.org/jouni/mpv_sponsorblock_minimal)
+-- Giữ lại khi cập nhật từ upstream:
+--   1. skip_ads() và toggle() kiểm tra `ranges` trước khi dùng.
+--   2. end_file() luôn dọn state, kể cả khi ON == false.
+--   3. Key binding đăng ký một lần lúc load, không đăng ký trong callback fetch.
 
 local opt = require 'mp.options'
 local utils = require 'mp.utils'
@@ -22,7 +28,7 @@ local options = {
 opt.read_options(options)
 
 function skip_ads(name,pos)
-	if pos then
+	if pos and ranges then
 		for _, i in pairs(ranges) do
 			v = i.segment[2]
 			if i.segment[1] <= pos and v > pos then
@@ -100,7 +106,6 @@ function file_loaded()
 
 			if ranges then
 				ON = true
-				mp.add_key_binding("b","sponsorblock",toggle)
 				mp.observe_property("time-pos", "native", skip_ads)
 			end
 		end
@@ -108,13 +113,21 @@ function file_loaded()
 end
 
 function end_file()
-	if not ON then return end
+	-- Luôn dọn state, kể cả khi người dùng đã tắt bằng toggle (ON == false).
+	-- Nếu return sớm ở đây, `ranges` của video trước còn lại; video sau không
+	-- phải YouTube sẽ thoát sớm trong file_loaded() và giữ nguyên `ranges` cũ,
+	-- nên bật lại sẽ skip nhầm timestamp của video khác.
+	-- unobserve_property khi chưa observe là no-op nên gọi vô điều kiện được.
 	mp.unobserve_property(skip_ads)
 	ranges = nil
 	ON = false
 end
 
 function toggle()
+	if not ranges then
+		mp.osd_message("[sponsorblock] no segments for this video")
+		return
+	end
 	if ON then
 		mp.unobserve_property(skip_ads)
 		mp.osd_message("[sponsorblock] off")
@@ -125,6 +138,10 @@ function toggle()
 		ON = true
 	end
 end
+
+-- Đăng ký một lần lúc load thay vì bên trong callback fetch: binding luôn tồn
+-- tại và deterministic, còn việc "có dữ liệu hay không" do toggle() tự kiểm tra.
+mp.add_key_binding("b", "sponsorblock", toggle)
 
 mp.register_event("file-loaded", file_loaded)
 mp.register_event("end-file", end_file)

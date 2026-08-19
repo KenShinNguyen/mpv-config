@@ -56,17 +56,39 @@ một phím tắt chết hay một option viết sai chính tả có thể nằm
 sau kiểm tra những trường hợp đó mà không cần cài mpv:
 
 ```sh
-python3 tools/check-config.py
+python3 tools/check-config.py   # tính nhất quán của cấu hình
+python3 tools/check-lua.py      # cú pháp Lua (cần luajit)
+python3 tools/check-tests.py    # test hành vi script (cần luajit)
 ```
 
-Nó bắt các lỗi: `script-binding` trỏ tới script không tồn tại, `apply-profile`
-trỏ tới profile chưa định nghĩa, shader thiếu file, hai dòng `input.conf` gán
-trùng phím (dòng sau lặng lẽ đè dòng trước), script có phím mặc định bị
-`input.conf` chiếm mất nên không gọi được, và key sai chính tả hoặc bị bọc dấu
-nháy trong `script-opts/*.conf` (`read_options` không bóc dấu nháy).
+`check-config.py` bắt: `script-binding` trỏ tới script không tồn tại,
+`apply-profile` trỏ tới profile chưa định nghĩa, shader thiếu file, hai dòng
+`input.conf` gán trùng phím (dòng sau lặng lẽ đè dòng trước), script có phím
+mặc định bị `input.conf` chiếm mất nên không gọi được, và key sai chính tả hoặc
+bị bọc dấu nháy trong `script-opts/*.conf` (`read_options` không bóc dấu nháy).
 
-Kiểm tra này cũng chạy tự động trên mỗi push qua GitHub Actions
+`check-lua.py` biên dịch thử mọi file trong `scripts/` bằng **LuaJIT** — đúng
+runtime mà mpv nhúng. Script sai cú pháp không làm mpv báo lỗi ra màn hình, nó
+chỉ bị bỏ qua, nên biểu hiện duy nhất là "phím tắt tự dưng không ăn".
+
+`check-tests.py` chạy các file `tests/*_spec.lua`. Chúng nạp script thật với một
+bộ giả lập API mpv tối thiểu ([`tests/mpv_stub.lua`](tests/mpv_stub.lua)) rồi
+kiểm tra hành vi mà không cần mở mpv.
+
+Cả ba chạy tự động trên mỗi push qua GitHub Actions
 ([`.github/workflows/check-config.yml`](.github/workflows/check-config.yml)).
+
+## Bảo mật: scheme `mpv://`
+
+[`scripts/protocol_hook.lua`](scripts/protocol_hook.lua) đăng ký `mpv://` làm
+protocol handler, nghĩa là **URL đi thẳng từ trình duyệt vào script**. Mọi lệnh
+ngoài trong script đều chạy bằng argv (`run` của mpv thực thi trực tiếp, không
+qua shell), và URL được lọc ngay tại `on_load` hook.
+
+Một tuỳ chọn cần biết: `mpv://...?app=<base64>` cho phép trang web chỉ định
+chương trình để mở link. Tính năng này **mặc định tắt**; muốn dùng phải liệt kê
+cụ thể trong `allowed_apps` ở
+[`script-opts/protocol_hook.conf`](script-opts/protocol_hook.conf).
 
 ## Scripts and Shaders Credits
 

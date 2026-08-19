@@ -9,6 +9,10 @@ on:
 jobs:
   check-config:
     runs-on: ubuntu-latest
+    # Chặn trên: toàn bộ job chỉ mất ~30s, nên nếu quá 10 phút là runner có vấn
+    # đề chứ không phải công việc chậm. Không có mốc này thì một bước treo sẽ
+    # ngốn hết 6 tiếng mặc định và giữ PR ở trạng thái "unstable" suốt thời gian đó.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -18,3 +22,21 @@ jobs:
 
       - name: Kiểm tra tính nhất quán của cấu hình
         run: python3 tools/check-config.py
+
+      # LuaJIT chính là runtime mpv nhúng, nên đây là cùng một parser với lúc
+      # mpv nạp script — không phải một phương ngữ Lua khác.
+      - name: Cài LuaJIT
+        timeout-minutes: 5
+        # `apt-get update` trên runner thỉnh thoảng treo hẳn (đã gặp: kẹt 65
+        # phút ở đúng bước này). Index của runner thường đã đủ mới, nên thử cài
+        # thẳng trước và chỉ update khi lần đó thất bại.
+        run: |
+          sudo apt-get install -y -qq luajit \
+            || { sudo apt-get update -qq && sudo apt-get install -y -qq luajit; }
+          luajit -v
+
+      - name: Kiểm tra cú pháp Lua
+        run: python3 tools/check-lua.py
+
+      - name: Chạy test
+        run: python3 tools/check-tests.py
