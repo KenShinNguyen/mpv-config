@@ -35,8 +35,11 @@ Xem/tải phụ đề YouTube và phát URL cần có [yt-dlp](https://github.co
 | --- | --- |
 | `Chuột phải` / `Shift+m` | Mở menu |
 | `Tab` | Ẩn/hiện giao diện |
+| `→` | Bấm nhanh: tua tới 5s — Giữ: tua nhanh dần (evafast) |
+| `Alt+f` | Bật/tắt chế độ tua nhanh mà không cần giữ phím |
 | `Ctrl+v` | Phát file/URL từ clipboard |
 | `h` | Lịch sử phát (memo) |
+| `Alt+s` | Bật/tắt bỏ qua đoạn quảng cáo YouTube (SponsorBlock) |
 | `-` / `y` | Chọn chất lượng video / audio (stream) |
 | `Shift+w` | Cắt video thành WebM |
 | `Ctrl+Shift+s` | Cắt video lossless |
@@ -45,6 +48,25 @@ Xem/tải phụ đề YouTube và phát URL cần có [yt-dlp](https://github.co
 | `` ` `` | Mở console |
 
 Toàn bộ phím tắt nằm trong [`input.conf`](input.conf).
+
+## Kiểm tra cấu hình
+
+mpv không báo lỗi khi cấu hình sai — nó chỉ ghi một dòng vào log rồi bỏ qua, nên
+một phím tắt chết hay một option viết sai chính tả có thể nằm im rất lâu. Script
+sau kiểm tra những trường hợp đó mà không cần cài mpv:
+
+```sh
+python3 tools/check-config.py
+```
+
+Nó bắt các lỗi: `script-binding` trỏ tới script không tồn tại, `apply-profile`
+trỏ tới profile chưa định nghĩa, shader thiếu file, hai dòng `input.conf` gán
+trùng phím (dòng sau lặng lẽ đè dòng trước), script có phím mặc định bị
+`input.conf` chiếm mất nên không gọi được, và key sai chính tả hoặc bị bọc dấu
+nháy trong `script-opts/*.conf` (`read_options` không bóc dấu nháy).
+
+Kiểm tra này cũng chạy tự động trên mỗi push qua GitHub Actions
+([`.github/workflows/check-config.yml`](.github/workflows/check-config.yml)).
 
 ## Scripts and Shaders Credits
 
