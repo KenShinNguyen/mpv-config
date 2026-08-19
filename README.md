@@ -104,13 +104,14 @@ Cách khắc phục:
 2. `mpv.conf` đã đặt `ytdl-format=bestvideo+bestaudio/best[acodec!=none]/best`
    để đảm bảo nếu phải fallback, mpv luôn chọn format có audio thay vì chọn
    nhầm video-only.
-3. `mpv.conf` cũng đã ép `extractor-args="youtube:player_client=tv,web"` —
-   client `tv` không bị YouTube áp SABR nên tránh được kiểu lỗi "phát vài
-   giây rồi đứng hình, mất tiếng hoàn toàn" ở trên; `web` là fallback cho các
-   video mà client `tv` không xem được (VD giới hạn độ tuổi).
-4. Nếu vẫn mất tiếng ở một video cụ thể, mở console (`` ` ``) rồi xem log —
-   dòng `Some ... formats have been skipped as they are missing a url` hoặc
-   `YouTube is forcing SABR streaming` xác nhận đúng nguyên nhân trên.
+3. Nếu vẫn mất tiếng/đứng hình ở một video cụ thể, mở console (`` ` ``) hoặc
+   chạy `mpv.exe --terminal --msg-level=all=v "URL" > log.txt 2>&1` rồi xem
+   log — dòng `Some ... formats have been skipped as they are missing a url`
+   hoặc `YouTube is forcing SABR streaming` xác nhận đúng nguyên nhân trên.
+   Log chi tiết là cần thiết để chọn đúng cách khắc phục tiếp theo (ép
+   `player_client` cụ thể qua `extractor-args` có thể giúp nhưng cũng có thể
+   khiến một số client yêu cầu xác thực và làm mọi thứ tệ hơn nếu chọn sai
+   client — nên cần log thật trước khi áp dụng).
 
 ## Bảo mật: scheme `mpv://`
 
