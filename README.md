@@ -113,8 +113,11 @@ ngay.
 Tách lỗi ra khỏi mpv bằng cách tải trực tiếp đúng format đó:
 
 ```sh
-yt-dlp -f 251 -o NUL "<URL>"     # Windows; Linux/macOS dùng -o /dev/null
+yt-dlp -f 251 -o test.webm "<URL>"    # thấy % chạy vài giây là đủ, Ctrl+C rồi xoá
 ```
+
+(Đừng dùng `-o NUL` trên Windows — yt-dlp hiểu `NUL` thành thư mục và báo lỗi
+đường dẫn trước khi kịp tải, không nói lên điều gì.)
 
 - Cũng 403 → lỗi thuộc về yt-dlp/YouTube, mpv vô can. Xử lý theo thứ tự:
   1. `yt-dlp -U` (hoặc `pip install -U yt-dlp`). YouTube đổi cơ chế liên tục,
