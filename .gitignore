@@ -3,11 +3,17 @@
 *.cache
 cache/
 
+# Phụ đề uosc tải về (subtitles_directory=~~/subtitles trong script-opts/uosc.conf)
+subtitles/
+
 # Trạng thái phát do mpv sinh ra (watch later, lịch sử)
 watch_later/
 watch-later/
 mpv-history.log
 history.log
+
+# Bytecode do tools/check-config.py sinh ra
+__pycache__/
 
 # File tạm của hệ điều hành / editor
 .DS_Store
