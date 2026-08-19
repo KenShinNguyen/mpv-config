@@ -83,9 +83,14 @@ Cả ba chạy tự động trên mỗi push qua GitHub Actions
 ### Phát stream (YouTube/URL) không có tiếng
 
 YouTube đang dần triển khai giao thức streaming mới (SABR) khiến các format
-audio-only dạng DASH mà yt-dlp trước giờ vẫn dùng bị chặn hoặc thiếu URL. Khi
-đó `ytdl-format=bestvideo+bestaudio/best` có thể fallback nhầm sang một format
-chỉ có video, không có audio — phát vẫn chạy bình thường nhưng im lặng.
+audio-only dạng DASH mà yt-dlp trước giờ vẫn dùng bị chặn hoặc thiếu URL. Có
+hai kiểu biểu hiện:
+
+- **Mất tiếng nhưng video chạy mượt bình thường**: `ytdl-format` fallback
+  nhầm sang format chỉ có video.
+- **Phát vài giây rồi đứng hình, hoàn toàn không tiếng**: nặng hơn — YouTube
+  chặn hẳn kết nối stream của client đang dùng giữa chừng (SABR), không phải
+  do chọn nhầm format.
 
 Cách khắc phục:
 
@@ -99,7 +104,11 @@ Cách khắc phục:
 2. `mpv.conf` đã đặt `ytdl-format=bestvideo+bestaudio/best[acodec!=none]/best`
    để đảm bảo nếu phải fallback, mpv luôn chọn format có audio thay vì chọn
    nhầm video-only.
-3. Nếu vẫn mất tiếng ở một video cụ thể, mở console (`` ` ``) rồi xem log —
+3. `mpv.conf` cũng đã ép `extractor-args="youtube:player_client=tv,web"` —
+   client `tv` không bị YouTube áp SABR nên tránh được kiểu lỗi "phát vài
+   giây rồi đứng hình, mất tiếng hoàn toàn" ở trên; `web` là fallback cho các
+   video mà client `tv` không xem được (VD giới hạn độ tuổi).
+4. Nếu vẫn mất tiếng ở một video cụ thể, mở console (`` ` ``) rồi xem log —
    dòng `Some ... formats have been skipped as they are missing a url` hoặc
    `YouTube is forcing SABR streaming` xác nhận đúng nguyên nhân trên.
 
