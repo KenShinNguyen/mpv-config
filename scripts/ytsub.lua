@@ -1,3 +1,15 @@
+-- ytsub.lua — tải phụ đề tự động của YouTube
+--
+-- LOCAL MODIFICATIONS (upstream: https://github.com/Idlusen/mpv-ytsub)
+-- Giữ lại khi cập nhật từ upstream:
+--   1. cache_dir mặc định dùng `~~cache/` của mpv thay cho os.getenv("HOME")
+--      (HOME thường không tồn tại trên Windows -> join_path(nil, ...) lỗi ngay
+--      lúc load script, khiến toàn bộ script chết im lặng).
+--   2. Tạo thư mục bằng mp.utils.mkdir / lệnh theo từng OS, không gọi thẳng
+--      executable "mkdir" (trên Windows mkdir là builtin của cmd.exe).
+--   3. sub-add dùng mp.commandv thay vì nối chuỗi, để đường dẫn có dấu cách
+--      (C:\Users\Ten Co Dau\...) không làm hỏng lệnh.
+
 -- optionally import module, from SO
 local function want(name)
   local out; if xpcall(
@@ -8,6 +20,7 @@ local function want(name)
 end
 
 local utils = require('mp.utils')
+local log = require('mp.msg')
 local input = require('mp.input')
 local mp = require('mp')
 local http = want("socket.http")
@@ -17,18 +30,41 @@ local options = {
     source_lang = "fr",
     load_autosub_binding = "alt+y",
     autoload_autosub_binding = "alt+Y",
-    cache_dir = utils.join_path(os.getenv("HOME"), ".cache/ytsub/"),
+    -- `~~cache/` là thư mục cache của mpv: ~/.cache/mpv tren Linux/macOS,
+    -- %LOCALAPPDATA%\mpv\cache tren Windows. Ghi de duoc trong script-opts.
+    cache_dir = "~~cache/ytsub",
 }
 require("mp.options").read_options(options)
 
+-- Expand cả giá trị mặc định lẫn giá trị người dùng đặt trong script-opts,
+-- nên `~/...` hay `~~/...` đều dùng được.
+options.cache_dir = mp.command_native({"expand-path", options.cache_dir})
+
 -- create cache directory for subtitles if it doesn't exist
-local res = utils.file_info(options.cache_dir)
-if not res or not res.is_dir then
-    mp.command_native({
+local function ensure_dir(path)
+    local res = utils.file_info(path)
+    if res and res.is_dir then return true end
+
+    -- mp.utils.mkdir chỉ có trên mpv mới. Nếu thiếu hoặc thất bại thì rơi
+    -- xuống fallback bên dưới thay vì bỏ cuộc.
+    if utils.mkdir and utils.mkdir(path) then return true end
+
+    -- Fallback: "mkdir" không phải executable trên Windows, phải qua cmd.exe.
+    local args = mp.get_property("platform") == "windows"
+        and {"cmd", "/c", "mkdir", (path:gsub("/", "\\"))}
+        or {"mkdir", "-p", path}
+    local r = mp.command_native({
         name = "subprocess",
-        args = {"mkdir", options.cache_dir},
+        args = args,
         playback_only = false,
+        capture_stdout = true,
+        capture_stderr = true,
     })
+    return r ~= nil and r.status == 0
+end
+
+if not ensure_dir(options.cache_dir) then
+    log.warn("khong tao duoc thu muc cache: " .. tostring(options.cache_dir))
 end
 
 local function info(msg)
@@ -87,7 +123,7 @@ local function load_autosub(lang, sub_info, ytid, is_primary)
     -- load the subtitle file as track ans select it
     if sub_is_available then
         if is_primary then
-            mp.command("sub-add " .. subfile .. " select 'youtube auto-sub' '" .. lang .. "'")
+            mp.commandv("sub-add", subfile, "select", "youtube auto-sub", lang)
         else
             -- compute the number of subtitle tracks in order to select the new track by id
             local n_tracks = mp.get_property_native("track-list/count")
@@ -99,7 +135,7 @@ local function load_autosub(lang, sub_info, ytid, is_primary)
                 end
                 i = i + 1
             end
-            mp.command("sub-add " .. subfile .. " auto 'youtube auto-sub' '" .. lang .. "'")
+            mp.commandv("sub-add", subfile, "auto", "youtube auto-sub", lang)
             mp.set_property("secondary-sid", n_subs + 1)
         end
         info(lang_name .. ' loaded')

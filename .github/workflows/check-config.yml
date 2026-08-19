@@ -18,3 +18,11 @@ jobs:
 
       - name: Kiểm tra tính nhất quán của cấu hình
         run: python3 tools/check-config.py
+
+      # LuaJIT chính là runtime mpv nhúng, nên đây là cùng một parser với lúc
+      # mpv nạp script — không phải một phương ngữ Lua khác.
+      - name: Cài LuaJIT
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq luajit
+
+      - name: Kiểm tra cú pháp Lua
+        run: python3 tools/check-lua.py

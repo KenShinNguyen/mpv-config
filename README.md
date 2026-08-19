@@ -56,16 +56,21 @@ một phím tắt chết hay một option viết sai chính tả có thể nằm
 sau kiểm tra những trường hợp đó mà không cần cài mpv:
 
 ```sh
-python3 tools/check-config.py
+python3 tools/check-config.py   # tính nhất quán của cấu hình
+python3 tools/check-lua.py      # cú pháp Lua (cần luajit)
 ```
 
-Nó bắt các lỗi: `script-binding` trỏ tới script không tồn tại, `apply-profile`
-trỏ tới profile chưa định nghĩa, shader thiếu file, hai dòng `input.conf` gán
-trùng phím (dòng sau lặng lẽ đè dòng trước), script có phím mặc định bị
-`input.conf` chiếm mất nên không gọi được, và key sai chính tả hoặc bị bọc dấu
-nháy trong `script-opts/*.conf` (`read_options` không bóc dấu nháy).
+`check-config.py` bắt: `script-binding` trỏ tới script không tồn tại,
+`apply-profile` trỏ tới profile chưa định nghĩa, shader thiếu file, hai dòng
+`input.conf` gán trùng phím (dòng sau lặng lẽ đè dòng trước), script có phím
+mặc định bị `input.conf` chiếm mất nên không gọi được, và key sai chính tả hoặc
+bị bọc dấu nháy trong `script-opts/*.conf` (`read_options` không bóc dấu nháy).
 
-Kiểm tra này cũng chạy tự động trên mỗi push qua GitHub Actions
+`check-lua.py` biên dịch thử mọi file trong `scripts/` bằng **LuaJIT** — đúng
+runtime mà mpv nhúng. Script sai cú pháp không làm mpv báo lỗi ra màn hình, nó
+chỉ bị bỏ qua, nên biểu hiện duy nhất là "phím tắt tự dưng không ăn".
+
+Cả hai chạy tự động trên mỗi push qua GitHub Actions
 ([`.github/workflows/check-config.yml`](.github/workflows/check-config.yml)).
 
 ## Scripts and Shaders Credits
