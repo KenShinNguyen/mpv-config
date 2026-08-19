@@ -24,7 +24,7 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCRIPTS = os.path.join(ROOT, "scripts")
+LUA_DIRS = [os.path.join(ROOT, "scripts"), os.path.join(ROOT, "tests")]
 
 # (tên lệnh, tham số chỉ-kiểm-tra-cú-pháp-không-xuất-file)
 CANDIDATES = [
@@ -46,10 +46,11 @@ def find_compiler() -> tuple[str, list[str]] | None:
 
 def lua_files() -> list[str]:
     found = []
-    for dirpath, _dirnames, filenames in os.walk(SCRIPTS):
-        for filename in filenames:
-            if filename.endswith(".lua"):
-                found.append(os.path.join(dirpath, filename))
+    for root in LUA_DIRS:
+        for dirpath, _dirnames, filenames in os.walk(root):
+            for filename in filenames:
+                if filename.endswith(".lua"):
+                    found.append(os.path.join(dirpath, filename))
     return sorted(found)
 
 
