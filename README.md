@@ -83,52 +83,63 @@ Cả ba chạy tự động trên mỗi push qua GitHub Actions
 ### Phát stream (YouTube/URL) mất tiếng hoặc đứng hình
 
 Hai biểu hiện hay đi cùng nhau: **không có tiếng** và **phát vài giây rồi
-đứng hình**. Nguyên nhân gần như luôn nằm ở tầng tải stream, không phải ở
-audio device — nếu file local vẫn phát bình thường thì loa/driver không có
-lỗi.
+đứng hình**. Nguyên nhân nằm ở tầng tải stream, không phải ở audio device —
+nếu file local vẫn phát bình thường thì loa/driver không có lỗi.
 
-Cách chẩn đoán (làm trước khi sửa bất cứ thứ gì):
+Lấy log verbose trước khi sửa bất cứ thứ gì:
 
 ```sh
 mpv --terminal --msg-level=all=v "<URL>" > log.txt 2>&1
 ```
 
-Mở `log.txt` và tìm dòng `403 Forbidden`, `failed to load segment`, hoặc
-`audio EOF reached`. Chúng chỉ đúng thứ đang hỏng.
+Mở `log.txt`, tìm `403 Forbidden`, `failed to load segment`, `audio EOF reached`.
 
-**Nguyên nhân 1 — script proxy tự thêm (VD `http-ytproxy`).** Nếu log có:
+**Nguyên nhân 1 — yt-dlp lấy được URL nhưng URL bị YouTube chặn.** Dấu hiệu:
+
+```
+stream: Failed to open ...itag=251        ← audio 403 ngay request đầu
+timeline: failed to load segment
+cplayer: audio EOF reached                 ← mất tiếng hoàn toàn
+ffmpeg: https: Will reconnect at 10485760 ... 403 Forbidden
+mkv: EOF reached                           ← video chạy hết chunk 10MB rồi đứng
+```
+
+Tìm trong log chuỗi `&c=` của URL và `__yt_dlp_client`. Nếu là `ANDROID_VR` /
+`android_vr`, yt-dlp đã phải fallback sang client dự phòng (client duy nhất
+không cần PO token) nhưng `http_headers` nó khai báo vẫn là User-Agent Chrome.
+YouTube đối chiếu chéo và chặn — video qua được chunk đầu rồi 403, audio 403
+ngay.
+
+Tách lỗi ra khỏi mpv bằng cách tải trực tiếp đúng format đó:
+
+```sh
+yt-dlp -f 251 -o NUL "<URL>"     # Windows; Linux/macOS dùng -o /dev/null
+```
+
+- Cũng 403 → lỗi thuộc về yt-dlp/YouTube, mpv vô can. Xử lý theo thứ tự:
+  1. `yt-dlp -U` (hoặc `pip install -U yt-dlp`). YouTube đổi cơ chế liên tục,
+     bản cũ vài tuần là đủ để hỏng.
+  2. Cài PO token provider để yt-dlp dùng lại được client `web`:
+     [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider).
+  3. Cho yt-dlp mượn cookie trình duyệt — thêm vào `ytdl-raw-options` trong
+     `mpv.conf`: `cookies-from-browser=chrome`.
+- Tải được bình thường → lỗi ở header mpv gửi đi, không phải ở yt-dlp.
+
+**Nguyên nhân 2 — script proxy tự thêm (VD `http-ytproxy`).** Nếu log có:
 
 ```
 http_ytproxy: Starting subprocess: [...\http-ytproxy.exe ...]
 cplayer: Set property: http-proxy="http://127.0.0.1:6954"
-ffmpeg: https: HTTP error 403 Forbidden
-timeline: failed to load segment
-cplayer: audio EOF reached
 ```
 
-thì proxy đó đang chặn chính stream của bạn: audio bị 403 ngay từ request đầu
-(mất tiếng hoàn toàn), video qua được chunk đầu rồi 403 ở chunk sau (đứng hình
-sau vài giây). Các script proxy kiểu này hay hỏng mỗi khi YouTube đổi cơ chế.
-Repo này **không** chứa script nào như vậy — nếu có, là do tự thêm vào
-`scripts/`. Tắt bằng cách đổi tên thư mục script đó (thêm hậu tố bất kỳ) rồi
-mở lại mpv.
-
-**Nguyên nhân 2 — yt-dlp cũ.** YouTube đang triển khai giao thức streaming
-mới (SABR) khiến các format DASH audio-only bị chặn hoặc thiếu URL. Bản yt-dlp
-cũ chưa có cơ chế fallback qua client khác nên hay chọn nhầm format không có
-audio:
-
-```sh
-yt-dlp -U
-# hoặc: pip install -U yt-dlp
-```
-
-`mpv.conf` đã đặt `ytdl-format=bestvideo+bestaudio/best[acodec!=none]/best` để
-nếu phải fallback thì mpv vẫn chọn format có audio thay vì video-only.
+thì proxy đó đang đứng giữa và có thể tự nó trả 403. Repo này **không** chứa
+script nào như vậy — nếu có là do tự thêm vào `scripts/`. Tắt bằng cách đổi tên
+thư mục script đó (thêm hậu tố bất kỳ) rồi mở lại mpv. Lưu ý: tắt proxy mà log
+vẫn còn `403 Forbidden` thì proxy không phải thủ phạm, quay lại nguyên nhân 1.
 
 > Đừng ép `extractor-args="youtube:player_client=..."` theo phỏng đoán — chọn
 > sai client có thể khiến yt-dlp không lấy được stream nào cả. Chỉ dùng khi log
-> chỉ rõ client hiện tại bị chặn.
+> chỉ rõ client hiện tại bị chặn và bạn biết client thay thế nào còn chạy được.
 
 ## Bảo mật: scheme `mpv://`
 
