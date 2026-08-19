@@ -80,38 +80,69 @@ Cả ba chạy tự động trên mỗi push qua GitHub Actions
 
 ## Xử lý sự cố
 
-### Phát stream (YouTube/URL) không có tiếng
+### Phát stream (YouTube/URL) mất tiếng hoặc đứng hình
 
-YouTube đang dần triển khai giao thức streaming mới (SABR) khiến các format
-audio-only dạng DASH mà yt-dlp trước giờ vẫn dùng bị chặn hoặc thiếu URL. Có
-hai kiểu biểu hiện:
+Hai biểu hiện hay đi cùng nhau: **không có tiếng** và **phát vài giây rồi
+đứng hình**. Nguyên nhân nằm ở tầng tải stream, không phải ở audio device —
+nếu file local vẫn phát bình thường thì loa/driver không có lỗi.
 
-- **Mất tiếng nhưng video chạy mượt bình thường**: `ytdl-format` fallback
-  nhầm sang format chỉ có video.
-- **Phát vài giây rồi đứng hình, hoàn toàn không tiếng**: nặng hơn — YouTube
-  chặn hẳn kết nối stream của client đang dùng giữa chừng (SABR), không phải
-  do chọn nhầm format.
+Lấy log verbose trước khi sửa bất cứ thứ gì:
 
-Cách khắc phục:
+```sh
+mpv --terminal --msg-level=all=v "<URL>" > log.txt 2>&1
+```
 
-1. **Cập nhật yt-dlp lên bản mới nhất** — đây là nguyên nhân phổ biến nhất,
-   vì các bản cũ chưa có cơ chế fallback qua client khác (`tv`, `ios`...) khi
-   client mặc định bị chặn SABR:
-   ```sh
-   yt-dlp -U
-   # hoặc: pip install -U yt-dlp
-   ```
-2. `mpv.conf` đã đặt `ytdl-format=bestvideo+bestaudio/best[acodec!=none]/best`
-   để đảm bảo nếu phải fallback, mpv luôn chọn format có audio thay vì chọn
-   nhầm video-only.
-3. Nếu vẫn mất tiếng/đứng hình ở một video cụ thể, mở console (`` ` ``) hoặc
-   chạy `mpv.exe --terminal --msg-level=all=v "URL" > log.txt 2>&1` rồi xem
-   log — dòng `Some ... formats have been skipped as they are missing a url`
-   hoặc `YouTube is forcing SABR streaming` xác nhận đúng nguyên nhân trên.
-   Log chi tiết là cần thiết để chọn đúng cách khắc phục tiếp theo (ép
-   `player_client` cụ thể qua `extractor-args` có thể giúp nhưng cũng có thể
-   khiến một số client yêu cầu xác thực và làm mọi thứ tệ hơn nếu chọn sai
-   client — nên cần log thật trước khi áp dụng).
+Mở `log.txt`, tìm `403 Forbidden`, `failed to load segment`, `audio EOF reached`.
+
+**Nguyên nhân 1 — yt-dlp lấy được URL nhưng URL bị YouTube chặn.** Dấu hiệu:
+
+```
+stream: Failed to open ...itag=251        ← audio 403 ngay request đầu
+timeline: failed to load segment
+cplayer: audio EOF reached                 ← mất tiếng hoàn toàn
+ffmpeg: https: Will reconnect at 10485760 ... 403 Forbidden
+mkv: EOF reached                           ← video chạy hết chunk 10MB rồi đứng
+```
+
+Tìm trong log chuỗi `&c=` của URL và `__yt_dlp_client`. Nếu là `ANDROID_VR` /
+`android_vr`, yt-dlp đã phải fallback sang client dự phòng (client duy nhất
+không cần PO token) nhưng `http_headers` nó khai báo vẫn là User-Agent Chrome.
+YouTube đối chiếu chéo và chặn — video qua được chunk đầu rồi 403, audio 403
+ngay.
+
+Tách lỗi ra khỏi mpv bằng cách tải trực tiếp đúng format đó:
+
+```sh
+yt-dlp -f 251 -o test.webm "<URL>"    # thấy % chạy vài giây là đủ, Ctrl+C rồi xoá
+```
+
+(Đừng dùng `-o NUL` trên Windows — yt-dlp hiểu `NUL` thành thư mục và báo lỗi
+đường dẫn trước khi kịp tải, không nói lên điều gì.)
+
+- Cũng 403 → lỗi thuộc về yt-dlp/YouTube, mpv vô can. Xử lý theo thứ tự:
+  1. `yt-dlp -U` (hoặc `pip install -U yt-dlp`). YouTube đổi cơ chế liên tục,
+     bản cũ vài tuần là đủ để hỏng.
+  2. Cài PO token provider để yt-dlp dùng lại được client `web`:
+     [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider).
+  3. Cho yt-dlp mượn cookie trình duyệt — thêm vào `ytdl-raw-options` trong
+     `mpv.conf`: `cookies-from-browser=chrome`.
+- Tải được bình thường → lỗi ở header mpv gửi đi, không phải ở yt-dlp.
+
+**Nguyên nhân 2 — script proxy tự thêm (VD `http-ytproxy`).** Nếu log có:
+
+```
+http_ytproxy: Starting subprocess: [...\http-ytproxy.exe ...]
+cplayer: Set property: http-proxy="http://127.0.0.1:6954"
+```
+
+thì proxy đó đang đứng giữa và có thể tự nó trả 403. Repo này **không** chứa
+script nào như vậy — nếu có là do tự thêm vào `scripts/`. Tắt bằng cách đổi tên
+thư mục script đó (thêm hậu tố bất kỳ) rồi mở lại mpv. Lưu ý: tắt proxy mà log
+vẫn còn `403 Forbidden` thì proxy không phải thủ phạm, quay lại nguyên nhân 1.
+
+> Đừng ép `extractor-args="youtube:player_client=..."` theo phỏng đoán — chọn
+> sai client có thể khiến yt-dlp không lấy được stream nào cả. Chỉ dùng khi log
+> chỉ rõ client hiện tại bị chặn và bạn biết client thay thế nào còn chạy được.
 
 ## Bảo mật: scheme `mpv://`
 
